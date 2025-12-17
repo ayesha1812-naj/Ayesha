@@ -1,79 +1,176 @@
-# ==============================
-# Harassment Detection App - Streamlit Cloud
-# ==============================
 import streamlit as st
-from datetime import datetime
 from PIL import Image
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 import os
 
-# ------------------- Page Config -------------------
-st.set_page_config(
-    page_title="Harassment Detection App",
-    layout="centered"
-)
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="SafeChat", layout="centered")
 
-st.title("🚨 AI-based Harassment Detection App")
+# ---------------- CUSTOM CSS (WhatsApp UI) ----------------
+st.markdown("""
+<style>
+.chat-you {
+    background-color:#DCF8C6;
+    padding:10px;
+    border-radius:10px;
+    margin:5px;
+}
+.chat-friend {
+    background-color:#FFFFFF;
+    padding:10px;
+    border-radius:10px;
+    margin:5px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# ------------------- Text Harassment -------------------
-st.header("📝 Text Harassment Detection")
-text_input = st.text_area("Enter message for analysis:")
+st.title("💬 SafeChat – WhatsApp Style Messenger")
+st.caption("AI Harassment Detection | Tamil | Hindi | FIR PDF")
 
-# Simple keywords dictionary for demo
-harassment_keywords = {
-    "bullying": ["idiot", "loosu", "stupid"],
-    "sexual": ["punda", "bitch", "sexual"],
-    "threat": ["kill", "hit", "threat"],
-    "hate_speech": ["hate", "dumb", "fool"]
+# ---------------- SESSION ----------------
+if "chat" not in st.session_state:
+    st.session_state.chat = []
+
+# ---------------- HARASSMENT DATA ----------------
+HARASSMENT = {
+    "Sexual Harassment": {
+        "keywords": ["nude", "sex", "body"],
+        "law": "IPC 354A",
+        "ta": "பாலியல் தொல்லை கண்டறியப்பட்டது",
+        "hi": "यौन उत्पीड़न पाया गया"
+    },
+    "Threat": {
+        "keywords": ["kill", "die"],
+        "law": "IPC 506",
+        "ta": "அச்சுறுத்தல் கண்டறியப்பட்டது",
+        "hi": "धमकी पाई गई"
+    },
+    "Bullying": {
+        "keywords": ["idiot", "stupid"],
+        "law": "IPC 507",
+        "ta": "புல்லிங் கண்டறியப்பட்டது",
+        "hi": "बदमाशी पाई गई"
+    }
 }
 
-detected_categories = []
-for category, words in harassment_keywords.items():
-    if any(word in text_input.lower() for word in words):
-        detected_categories.append(category)
+# ---------------- FUNCTIONS ----------------
+def detect(text):
+    text = text.lower()
+    for cat, data in HARASSMENT.items():
+        for w in data["keywords"]:
+            if w in text:
+                return cat, data
+    return None, None
 
-if detected_categories:
-    st.warning(f"⚠️ Harassment Detected! Categories: {', '.join(detected_categories)}")
-    st.info("📖 Applicable Laws (Demo): IPC 294, 506, 509 | IT Act 66A")
-else:
-    st.success("✅ No Harassment Detected")
+def add_msg(sender, content):
+    st.session_state.chat.append({
+        "sender": sender,
+        "content": content,
+        "time": datetime.now().strftime("%H:%M")
+    })
 
-# ------------------- Image Detection -------------------
-st.header("🖼️ Image Harassment Demo")
-uploaded_image = st.file_uploader("Upload an image:", type=["png", "jpg", "jpeg"])
-if uploaded_image is not None:
-    image = Image.open(uploaded_image)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-    st.warning("⚠️ Image-based harassment detected (Demo)")
-    st.info("📖 Applicable Laws (Demo): IPC 509 | IT Act 67")
+def generate_fir_pdf(details):
+    file_name = "FIR_Report.pdf"
+    c = canvas.Canvas(file_name, pagesize=A4)
+    text = c.beginText(40, 800)
+    text.setFont("Helvetica", 11)
 
-# ------------------- Audio Detection -------------------
-st.header("🎧 Audio Harassment Demo")
-uploaded_audio = st.file_uploader("Upload an audio file:", type=["mp3", "wav"])
-if uploaded_audio is not None:
-    st.audio(uploaded_audio, format='audio/mp3')
-    st.warning("⚠️ Voice harassment detected (Demo)")
-    st.info("📖 Applicable Laws (Demo): IPC 506 | IPC 509")
+    text.textLine("FIRST INFORMATION REPORT (FIR)")
+    text.textLine("------------------------------------")
+    for d in details:
+        text.textLine(d)
 
-# ------------------- Panic Alert Demo -------------------
-st.header("🚨 Panic Alert Demo")
-phone_number = st.text_input("Enter trusted contact number (Demo):", "+91 9876543210")
+    c.drawText(text)
+    c.save()
+    return file_name
+
+# ---------------- CHAT DISPLAY ----------------
+st.subheader("📱 Chat")
+
+for m in st.session_state.chat:
+    if m["sender"] == "You":
+        st.markdown(f"<div class='chat-you'><b>You ({m['time']}):</b> {m['content']}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<div class='chat-friend'><b>Friend ({m['time']}):</b> {m['content']}</div>", unsafe_allow_html=True)
+
+st.divider()
+
+# ---------------- TEXT MESSAGE ----------------
+msg = st.text_input("Type a message")
+
+if st.button("📩 Send"):
+    if msg:
+        add_msg("You", msg)
+        cat, data = detect(msg)
+
+        if cat:
+            reply = f"""🚨 {cat} Detected  
+⚖ Law: {data['law']}  
+🗣 Tamil: {data['ta']}  
+🗣 Hindi: {data['hi']}"""
+            add_msg("Friend", reply)
+        else:
+            add_msg("Friend", "✅ Message received safely")
+
+        st.experimental_rerun()
+
+# ---------------- IMAGE ----------------
+st.divider()
+st.subheader("🖼️ Send Image")
+
+img = st.file_uploader("Upload image", type=["jpg","png"])
+
+if img:
+    image = Image.open(img)
+    st.image(image)
+    add_msg("You", "[Image Sent]")
+    add_msg("Friend", "🚨 Obscene image detected | IT Act 67")
+    st.experimental_rerun()
+
+# ---------------- AUDIO ----------------
+st.divider()
+st.subheader("🎤 Send Audio")
+
+audio = st.file_uploader("Upload audio", type=["mp3","wav"])
+
+if audio:
+    st.audio(audio)
+    add_msg("You", "[Audio Sent]")
+    add_msg("Friend", "🚨 Abusive voice detected | IPC 506")
+    st.experimental_rerun()
+
+# ---------------- FIR PDF ----------------
+st.divider()
+st.subheader("📄 FIR PDF Generator")
+
+name = st.text_input("Victim Name")
+incident = st.text_area("Incident Description")
+
+if st.button("Generate FIR PDF"):
+    details = [
+        f"Victim Name: {name}",
+        f"Date: {datetime.now()}",
+        f"Incident: {incident}",
+        "Action Requested: Legal action under IPC & IT Act"
+    ]
+    pdf = generate_fir_pdf(details)
+    with open(pdf, "rb") as f:
+        st.download_button("⬇️ Download FIR PDF", f, file_name=pdf)
+
+# ---------------- PANIC ----------------
+st.divider()
+st.subheader("🚨 Panic Alert")
+
+num = st.text_input("Emergency Contact Number")
+
 if st.button("Send Panic Alert"):
-    st.success(f"📞 Panic alert sent to {phone_number} (Demo)")
+    st.success(f"Panic alert sent to {num} (Demo)")
 
-# ------------------- Evidence Saving -------------------
-st.header("🗂️ Evidence Locker")
-if st.button("Save Text Evidence"):
-    if not os.path.exists("evidence.txt"):
-        with open("evidence.txt", "w", encoding="utf-8") as f:
-            f.write("Timestamp | Message\n")
-    with open("evidence.txt", "a", encoding="utf-8") as f:
-        f.write(f"{datetime.now()} | {text_input}\n")
-    st.success("🗂️ Evidence saved successfully (Demo)")
+# ---------------- HELP ----------------
+st.divider()
+st.subheader("📞 Legal Help")
 
-# ------------------- NGO Links -------------------
-st.header("🔗 NGO Helplines")
-st.markdown("""
-- [Cyber Crime Helpline](https://www.cybercrime.gov.in)  
-- [Ishant NGO](https://www.ishant.org/help)  
-- [SafeCity](https://www.safecity.in)
-""")
+st.markdown("- Cyber Crime: https://cybercrime.gov.in")
+st.markdown("- Women Helpline: 1091")
