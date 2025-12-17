@@ -114,7 +114,7 @@ if st.button("📩 Send"):
         else:
             add_msg("Friend", "✅ Message received safely")
 
-        rerun()
+        st.rerun()
 
 # ---------------- IMAGE ----------------
 st.divider()
@@ -127,7 +127,7 @@ if img:
     st.image(image)
     add_msg("You", "[Image Sent]")
     add_msg("Friend", "🚨 Obscene image detected | IT Act 67")
-    rerun()
+    st.rerun()
 
 # ---------------- AUDIO ----------------
 st.divider()
@@ -139,7 +139,7 @@ if audio:
     st.audio(audio)
     add_msg("You", "[Audio Sent]")
     add_msg("Friend", "🚨 Abusive voice detected | IPC 506")
-    rerun()
+    st.rerun()
 
 # ---------------- FIR PDF ----------------
 st.divider()
