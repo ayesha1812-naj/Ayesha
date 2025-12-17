@@ -139,7 +139,7 @@ if audio:
     st.audio(audio)
     add_msg("You", "[Audio Sent]")
     add_msg("Friend", "🚨 Abusive voice detected | IPC 506")
-    st.experimental_rerun()
+    rerun()
 
 # ---------------- FIR PDF ----------------
 st.divider()
