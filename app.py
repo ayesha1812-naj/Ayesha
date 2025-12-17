@@ -114,7 +114,7 @@ if st.button("📩 Send"):
         else:
             add_msg("Friend", "✅ Message received safely")
 
-        st.experimental_rerun()
+        rerun()
 
 # ---------------- IMAGE ----------------
 st.divider()
@@ -127,7 +127,7 @@ if img:
     st.image(image)
     add_msg("You", "[Image Sent]")
     add_msg("Friend", "🚨 Obscene image detected | IT Act 67")
-    st.experimental_rerun()
+    rerun()
 
 # ---------------- AUDIO ----------------
 st.divider()
